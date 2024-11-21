@@ -2,11 +2,17 @@
 import { useState, useRef, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 
-interface AutocompleteProps {
+export interface AutocompleteOption {
+  id: string
+  name: string
+}
+
+export interface AutocompleteProps {
   value: string
   onChange: (value: string) => void
-  onSelect: (value: { id: string; name: string }) => void
-  options: Array<{ id: string; name: string }>
+  onSelect: (option: AutocompleteOption) => void
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
+  options: AutocompleteOption[]
   placeholder?: string
   disabled?: boolean
   className?: string
@@ -16,6 +22,7 @@ export function Autocomplete({
   value,
   onChange,
   onSelect,
+  onKeyDown,
   options,
   placeholder,
   disabled,
@@ -53,14 +60,16 @@ export function Autocomplete({
   return (
     <div ref={wrapperRef} className={`relative ${className}`}>
       <Input
+        type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         onCompositionStart={() => setComposing(true)}
         onCompositionEnd={() => {
           setComposing(false)
           setIsOpen(true)
         }}
-        onFocus={() => value && !composing && setIsOpen(true)}
+        onFocus={() => setIsOpen(true)}
         placeholder={placeholder}
         disabled={disabled}
         className="text-center"

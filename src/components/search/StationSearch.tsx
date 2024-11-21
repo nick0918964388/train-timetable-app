@@ -89,9 +89,9 @@ export default function StationSearch() {
     name: station.station_name
   }))
 
-  // 添加處理按鍵事件的函數
+  // 修改處理按鍵事件的函數
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !isSearching && date && startStation && endStation) {
+    if (e.key === 'Enter' && !isLoading && date && startStation && endStation) {
       handleSearch()
     }
   }
