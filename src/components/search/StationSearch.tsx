@@ -68,7 +68,7 @@ export default function StationSearch() {
       const formattedDate = format(date, 'yyyy-MM-dd')
       
       const response = await fetch(
-        `https://tdx.transportdata.tw/api/basic/v3/Rail/TRA/DailyTrainTimetable/OD/${startStation}/to/${endStation}/${formattedDate}?%24top=1000&%24format=JSON`
+        `/api/tdx/Rail/TRA/DailyTrainTimetable/OD/${startStation}/to/${endStation}/${formattedDate}?$top=1000&$format=JSON`
       )
       
       if (!response.ok) throw new Error('查詢失敗')
@@ -77,7 +77,7 @@ export default function StationSearch() {
       setSchedules(data.TrainTimetables || [])
     } catch (error) {
       console.error('Search error:', error)
-      setError('查詢失敗，請稍後再試')
+      setError(error instanceof Error ? error.message : '查詢失敗，請稍後再試')
       setSchedules([])
     } finally {
       setIsSearching(false)

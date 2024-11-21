@@ -5,9 +5,13 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/api/:path*',
-        destination: 'https://taiwanhelper.com/:path*',
+        source: '/api/tdx/:path*',
+        destination: 'https://tdx.transportdata.tw/api/basic/v3/:path*'
       },
+      {
+        source: '/api/taiwanhelper/:path*', 
+        destination: 'https://taiwanhelper.com/:path*'
+      }
     ]
   },
 }

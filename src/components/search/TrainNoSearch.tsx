@@ -34,9 +34,9 @@ export default function TrainNoSearch() {
       setIsLoading(true);
       setError(null);
 
-      // 1. 取得列車基本資料
+      // 使用重寫的路徑
       const detailResponse = await fetch(
-        `https://taiwanhelper.com/_next/data/bsBsvlyiGDJiVhyivWDW6/railway/train/${trainNo}.json?id=${trainNo}`
+        `/api/taiwanhelper/_next/data/bsBsvlyiGDJiVhyivWDW6/railway/train/${trainNo}.json?id=${trainNo}`
       );
       if (!detailResponse.ok) throw new Error('無法取得列車資料');
       const detailData = await detailResponse.json();
@@ -65,8 +65,8 @@ export default function TrainNoSearch() {
         ].filter(Boolean)
       });
 
-      // 2. 取得時刻表和即時狀態
-      const liveResponse = await fetch(`https://taiwanhelper.com/api/get-train-live?no=${trainNo}`);
+      // 同樣修改即時狀態的 API 調用
+      const liveResponse = await fetch(`/api/taiwanhelper/api/get-train-live?no=${trainNo}`);
       if (!liveResponse.ok) throw new Error('無法取得列車狀態');
       const liveData = await liveResponse.json();
       setLiveData(liveData);
