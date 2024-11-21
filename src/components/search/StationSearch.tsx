@@ -89,6 +89,13 @@ export default function StationSearch() {
     name: station.station_name
   }))
 
+  // 添加處理按鍵事件的函數
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !isSearching && date && startStation && endStation) {
+      handleSearch()
+    }
+  }
+
   return (
     <div className="space-y-6 p-4">
       <div className="space-y-4">
@@ -115,6 +122,7 @@ export default function StationSearch() {
                 setStartStationInput(option.name)
                 setStartStation(option.id)
               }}
+              onKeyDown={handleKeyDown}
               options={stationOptions}
               placeholder="請選擇起始站"
               disabled={isLoading}
@@ -136,6 +144,7 @@ export default function StationSearch() {
                 setEndStationInput(option.name)
                 setEndStation(option.id)
               }}
+              onKeyDown={handleKeyDown}
               options={stationOptions}
               placeholder="請選擇終點站"
               disabled={isLoading}
