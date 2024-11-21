@@ -54,4 +54,5 @@ export interface LiveData {
   liveUpdateTime: string;
   trainLiveMap: Record<string, number>;
   stationLiveMap: Record<string, number>;
+  nextStation?: string;
 } 

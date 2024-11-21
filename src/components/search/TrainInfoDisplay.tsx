@@ -161,12 +161,12 @@ export default function TrainInfoDisplay({ trainData, trainNo }: TrainInfoDispla
     return station ? station[0] : null
   }, [trainData.stationNames])
 
-  // 新增 getStationStatus 函數
+  // 修改 getStationStatus 函數
   const getStationStatus = useCallback((item: TrainTimeTableItem, liveData: LiveData | null) => {
     if (!liveData) return '-';
     
     // 檢查是否為下一站
-    if (liveData.nextStation === item.station) {
+    if (liveData.nextStation && liveData.nextStation === item.station) {
       return '下一站';
     }
     
