@@ -15,9 +15,19 @@ interface DatePickerProps {
   date?: Date
   onChange?: (date: Date | undefined) => void
   placeholder?: string
+  fromDate?: Date
+  toDate?: Date
+  className?: string
 }
 
-export function DatePicker({ date, onChange, placeholder }: DatePickerProps) {
+export function DatePicker({ 
+  date, 
+  onChange, 
+  placeholder,
+  fromDate,
+  toDate,
+  className 
+}: DatePickerProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -25,7 +35,8 @@ export function DatePicker({ date, onChange, placeholder }: DatePickerProps) {
           variant={"outline"}
           className={cn(
             "w-full justify-start text-left font-normal",
-            !date && "text-muted-foreground"
+            !date && "text-muted-foreground",
+            className
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
@@ -38,6 +49,13 @@ export function DatePicker({ date, onChange, placeholder }: DatePickerProps) {
           selected={date}
           onSelect={onChange}
           initialFocus
+          fromDate={fromDate}
+          toDate={toDate}
+          disabled={(date) => {
+            if (fromDate && date < fromDate) return true
+            if (toDate && date > toDate) return true
+            return false
+          }}
         />
       </PopoverContent>
     </Popover>

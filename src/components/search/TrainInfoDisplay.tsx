@@ -165,14 +165,14 @@ export default function TrainInfoDisplay({ trainData, trainNo }: TrainInfoDispla
   const getStationStatus = useCallback((item: TrainTimeTableItem, liveData: LiveData | null) => {
     if (!liveData) return '-';
     
-    // 檢查是否為下一站
-    if (liveData.nextStation && liveData.nextStation === item.station) {
+    // 檢查是否為下一站 - 使用 stationLiveMap 判斷
+    const stationKey = `${trainNo}_${item.stationId}`;
+    if (liveData.stationLiveMap[stationKey] === 0) {
       return '下一站';
     }
     
     // 獲取延誤狀態
-    const key = `${trainNo}_${item.stationId}`;
-    const delay = liveData.trainLiveMap[key];
+    const delay = liveData.trainLiveMap[stationKey];
     
     // 檢查是否已經過站
     const currentTime = new Date();
@@ -293,8 +293,8 @@ export default function TrainInfoDisplay({ trainData, trainNo }: TrainInfoDispla
               </thead>
               <tbody>
                 {timeTable.map((item, index) => {
-                  const isNextStation = liveData?.nextStation === item.station;
                   const status = getStationStatus(item, liveData);
+                  const isNextStation = status === '下一站';  // 使用 status 來判斷是否為下一站
                   const stationId = getStationId(item.station);
 
                   return (

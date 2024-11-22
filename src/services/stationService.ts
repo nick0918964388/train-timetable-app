@@ -3,9 +3,8 @@ import { supabase } from '@/lib/supabase'
 export interface Station {
   station_id: string;
   station_name: string;
-  line_id: string;
-  sequence: number;
-  traveled_distance: number;
+  address?: string;
+  city?: string;
 }
 
 export interface StationDetail {
@@ -20,13 +19,33 @@ export interface StationDetail {
 
 export async function fetchAllStations(): Promise<Station[]> {
   try {
-    const { data, error } = await supabase
-      .from('train_stations')
-      .select('*')
+    const { data: stationData, error: stationError } = await supabase
+      .from('train_station_details')
+      .select('station_id, station_name, address')
       .order('station_name')
 
-    if (error) throw error
-    return data || []
+    if (stationError) throw stationError
+
+    const stations = stationData.map(station => {
+      let city = ''
+      if (station.address) {
+        const cityMatches = station.address.match(
+          /(臺北市|新北市|基隆市|宜蘭縣|桃園市|新竹市|新竹縣|苗栗縣|台中市|彰化縣|南投縣|雲林縣|嘉義市|嘉義縣|台南市|高雄市|屏東縣|台東縣|花蓮縣)/
+        )
+        if (cityMatches) {
+          city = cityMatches[1]
+        }
+      }
+
+      return {
+        station_id: station.station_id,
+        station_name: station.station_name,
+        address: station.address,
+        city: city
+      }
+    })
+
+    return stations
   } catch (error) {
     console.error('Error fetching stations:', error)
     throw error

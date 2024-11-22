@@ -1,27 +1,51 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Button } from '@/components/ui/button'
-import { ArrowLeftRight } from 'lucide-react'
+import { ArrowLeftRight, ArrowLeft } from 'lucide-react'
 import { fetchAllStations } from '@/services/stationService'
 import type { Station } from '@/services/stationService'
 import { Autocomplete } from '@/components/ui/autocomplete'
-import { format } from 'date-fns'
+import { format, addDays, startOfYesterday } from 'date-fns'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface TrainSchedule {
-  TrainNo: string;
-  Direction: number;
-  StartingStationName: string;
-  EndingStationName: string;
-  DepartureTime: string;
-  ArrivalTime: string;
-  TrainTypeName: {
-    Zh_tw: string;
+  TrainInfo: {
+    TrainNo: string;
+    Direction: number;
+    TrainTypeName: {
+      Zh_tw: string;
+      En: string;
+    };
+    StartingStationName: {
+      Zh_tw: string;
+      En: string;
+    };
+    EndingStationName: {
+      Zh_tw: string;
+      En: string;
+    };
+    Note?: string;
   };
+  StopTimes: {
+    StationID: string;
+    StationName: {
+      Zh_tw: string;
+      En: string;
+    };
+    ArrivalTime: string;
+    DepartureTime: string;
+  }[];
+}
+
+interface CityGroup {
+  name: string;
+  stations: Station[];
 }
 
 export default function StationSearch() {
-  const [date, setDate] = useState<Date>()
+  const [date, setDate] = useState<Date>(new Date())
   const [stations, setStations] = useState<Station[]>([])
   const [startStationInput, setStartStationInput] = useState('')
   const [endStationInput, setEndStationInput] = useState('')
@@ -31,6 +55,12 @@ export default function StationSearch() {
   const [error, setError] = useState<string | null>(null)
   const [schedules, setSchedules] = useState<TrainSchedule[]>([])
   const [isSearching, setIsSearching] = useState(false)
+  const router = useRouter()
+  const [selectedCity, setSelectedCity] = useState<string>('')
+  const [filteredStations, setFilteredStations] = useState<Station[]>([])
+  const [showCitySelection, setShowCitySelection] = useState(false)
+  const [activeInput, setActiveInput] = useState<'start' | 'end' | null>(null)
+  const [showCityList, setShowCityList] = useState(true)
 
   useEffect(() => {
     async function loadStations() {
@@ -50,6 +80,33 @@ export default function StationSearch() {
     loadStations()
   }, [])
 
+  useEffect(() => {
+    const restoreSearch = localStorage.getItem('restoreStationSearch')
+    if (restoreSearch) {
+      try {
+        const {
+          date: savedDate,
+          startStation: savedStartStation,
+          endStation: savedEndStation,
+          startStationInput: savedStartInput,
+          endStationInput: savedEndInput,
+          schedules: savedSchedules
+        } = JSON.parse(restoreSearch)
+
+        setDate(savedDate ? new Date(savedDate) : new Date())
+        setStartStation(savedStartStation)
+        setEndStation(savedEndStation)
+        setStartStationInput(savedStartInput)
+        setEndStationInput(savedEndInput)
+        setSchedules(savedSchedules)
+
+        localStorage.removeItem('restoreStationSearch')
+      } catch (error) {
+        console.error('Error restoring station search:', error)
+      }
+    }
+  }, [])
+
   const handleSwapStations = () => {
     const tempInput = startStationInput
     const tempStation = startStation
@@ -60,25 +117,78 @@ export default function StationSearch() {
   }
 
   const handleSearch = async () => {
-    if (!date || !startStation || !endStation) return
+    if (!date || !startStation || !endStation) return;
     
     try {
-      setIsSearching(true)
-      setError(null)
-      const formattedDate = format(date, 'yyyy-MM-dd')
+      setIsSearching(true);
+      setError(null);
+      const formattedDate = format(date, 'yyyy-MM-dd');
       
       const response = await fetch(
         `/api/tdx/Rail/TRA/DailyTrainTimetable/OD/${startStation}/to/${endStation}/${formattedDate}?$top=1000&$format=JSON`
-      )
+      );
       
-      if (!response.ok) throw new Error('查詢失敗')
+      if (!response.ok) throw new Error('查詢失敗');
       
-      const data = await response.json()
-      setSchedules(data.TrainTimetables || [])
+      const data = await response.json();
+      setSchedules(data.TrainTimetables || []);
     } catch (error) {
-      console.error('Search error:', error)
+      console.error('Search error:', error);
+      setError(error instanceof Error ? error.message : '查詢失敗，請稍後再試');
+      setSchedules([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleTrainClick = async (trainNo: string) => {
+    try {
+      setIsSearching(true)
+      
+      // 獲取列車詳細資訊
+      const detailResponse = await fetch(
+        `/api/taiwanhelper/_next/data/bsBsvlyiGDJiVhyivWDW6/railway/train/${trainNo}.json?id=${trainNo}`
+      )
+      if (!detailResponse.ok) throw new Error('無法取得列車資料')
+      const detailData = await detailResponse.json()
+      
+      if (!detailData?.pageProps?.train) {
+        throw new Error('找不到該車次資料')
+      }
+
+      // 獲取即時狀態
+      const liveResponse = await fetch(`/api/taiwanhelper/api/get-train-live?no=${trainNo}`)
+      if (!liveResponse.ok) throw new Error('無法取得列車狀態')
+      const liveData = await liveResponse.json()
+
+      // 儲存車次查詢結果到 localStorage
+      localStorage.setItem('previousTrainData', JSON.stringify({
+        trainData: {
+          train: detailData.pageProps.train,
+          live: liveData,
+          stationNames: {} // 這裡可以加入站名對照表
+        },
+        trainNo,
+        activeTab: 'trainNo'
+      }))
+
+      // 儲存車站查詢結果到 localStorage
+      localStorage.setItem('previousStationSearch', JSON.stringify({
+        date,
+        startStation,
+        endStation,
+        startStationInput,
+        endStationInput,
+        schedules,
+        activeTab: 'station'
+      }))
+
+      // 導航到車次查詢頁面
+      router.push(`/train/${trainNo}`)
+
+    } catch (error) {
+      console.error('Error fetching train details:', error)
       setError(error instanceof Error ? error.message : '查詢失敗，請稍後再試')
-      setSchedules([])
     } finally {
       setIsSearching(false)
     }
@@ -96,17 +206,105 @@ export default function StationSearch() {
     }
   }
 
+  // 設定日期限制
+  const yesterday = startOfYesterday()
+  const maxDate = addDays(new Date(), 14) // 可以選擇未來14天
+
+  // 修改 cityGroups 的定義
+  const cityGroups = useMemo(() => {
+    const cities: { name: string; stations: Station[] }[] = [
+      { name: '臺北市', stations: [] },
+      { name: '新北市', stations: [] },
+      { name: '基隆市', stations: [] },
+      { name: '宜蘭縣', stations: [] },
+      { name: '桃園市', stations: [] },
+      { name: '新竹市', stations: [] },
+      { name: '新竹縣', stations: [] },
+      { name: '苗栗縣', stations: [] },
+      { name: '台中市', stations: [] },
+      { name: '彰化縣', stations: [] },
+      { name: '南投縣', stations: [] },
+      { name: '雲林縣', stations: [] },
+      { name: '嘉義市', stations: [] },
+      { name: '嘉義縣', stations: [] },
+      { name: '台南市', stations: [] },
+      { name: '高雄市', stations: [] },
+      { name: '屏東縣', stations: [] },
+      { name: '台東縣', stations: [] },
+      { name: '花蓮縣', stations: [] },
+    ]
+
+    // 根據車站的 city 屬性進行分類
+    stations.forEach(station => {
+      if (station.city) {
+        const city = cities.find(c => c.name === station.city)
+        if (city) {
+          city.stations.push(station)
+        }
+      }
+    })
+
+    return cities.filter(city => city.stations.length > 0)
+  }, [stations])
+
+  // 修改處理縣市選擇的函數
+  const handleCityClick = (cityName: string) => {
+    setSelectedCity(cityName)
+    const cityStations = cityGroups.find(c => c.name === cityName)?.stations || []
+    setFilteredStations(cityStations)
+    setShowCityList(false) // 新增這個 state 來控制縣市列表的顯示
+  }
+
+  // 修改處理車站輸入框點擊的函數
+  const handleStationInputClick = (type: 'start' | 'end') => {
+    setActiveInput(type)
+    setShowCitySelection(true)
+    setSelectedCity('') // 清空選中的縣市
+    setFilteredStations([]) // 清空篩選的車站列表
+    setShowCityList(true) // 重設為顯示縣市列表
+  }
+
+  // 處理車站選擇
+  const handleStationSelect = (station: { id: string; name: string }) => {
+    console.log('Selecting station:', station)
+    console.log('Active input:', activeInput)
+    
+    if (activeInput === 'start') {
+      setStartStationInput(station.name)
+      setStartStation(station.id)
+      console.log('Set start station:', station.id)
+    } else if (activeInput === 'end') {
+      setEndStationInput(station.name)
+      setEndStation(station.id)
+      console.log('Set end station:', station.id)
+    }
+    
+    setShowCitySelection(false)
+    setActiveInput(null)
+  }
+
+  console.log('Current state:', {
+    isLoading,
+    isSearching,
+    date,
+    startStation,
+    endStation
+  })
+
   return (
     <div className="space-y-6 p-4">
       <div className="space-y-4">
-        {/* 日期選擇 */}
+        {/* 日期選擇部分 */}
         <div className="flex flex-col space-y-2">
           <label className="text-sm font-medium">日期</label>
-          <div className="w-48">
+          <div className="w-64">
             <DatePicker
               date={date}
               onChange={setDate}
               placeholder="選擇日期"
+              fromDate={yesterday}
+              toDate={maxDate}
+              className="h-12"
             />
           </div>
         </div>
@@ -115,19 +313,16 @@ export default function StationSearch() {
         <div className="flex flex-col space-y-2">
           <label className="text-sm font-medium">車站</label>
           <div className="flex items-center space-x-2">
-            <Autocomplete
-              value={startStationInput}
-              onChange={setStartStationInput}
-              onSelect={(option) => {
-                setStartStationInput(option.name)
-                setStartStation(option.id)
-              }}
-              onKeyDown={handleKeyDown}
-              options={stationOptions}
-              placeholder="請選擇起始站"
-              disabled={isLoading}
-              className="flex-1"
-            />
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={startStationInput}
+                onClick={() => handleStationInputClick('start')}
+                readOnly
+                placeholder="請選擇起始站"
+                className="w-full h-10 px-3 border rounded-md"
+              />
+            </div>
             
             <button
               onClick={handleSwapStations}
@@ -137,20 +332,94 @@ export default function StationSearch() {
               <ArrowLeftRight className="w-5 h-5 text-gray-400" />
             </button>
 
-            <Autocomplete
-              value={endStationInput}
-              onChange={setEndStationInput}
-              onSelect={(option) => {
-                setEndStationInput(option.name)
-                setEndStation(option.id)
-              }}
-              onKeyDown={handleKeyDown}
-              options={stationOptions}
-              placeholder="請選擇終點站"
-              disabled={isLoading}
-              className="flex-1"
-            />
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={endStationInput}
+                onClick={() => handleStationInputClick('end')}
+                readOnly
+                placeholder="請選擇終點站"
+                className="w-full h-10 px-3 border rounded-md"
+              />
+            </div>
           </div>
+
+          {/* 車站選擇面板 */}
+          {showCitySelection && (
+            <div className="mt-2 p-4 border rounded-lg bg-white shadow-lg">
+              {/* 搜尋框 */}
+              <input
+                type="text"
+                placeholder="搜尋車站名稱"
+                className="w-full mb-4 p-2 border rounded"
+                onChange={(e) => {
+                  const searchText = e.target.value
+                  if (searchText) {
+                    setFilteredStations(stations.filter(s => 
+                      s.station_name.includes(searchText)
+                    ))
+                    setSelectedCity('') // 清空選中的縣市
+                    setShowCityList(true) // 顯示縣市列表
+                  } else {
+                    setFilteredStations([]) // 清空篩選結果
+                    setShowCityList(true) // 顯示縣市列表
+                  }
+                }}
+              />
+
+              {/* 如果有選擇縣市，顯示返回按鈕 */}
+              {selectedCity && !showCityList && (
+                <button
+                  onClick={() => {
+                    setSelectedCity('')
+                    setFilteredStations([])
+                    setShowCityList(true)
+                  }}
+                  className="mb-4 px-4 py-2 text-blue-600 hover:text-blue-800 flex items-center"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  返回縣市選擇
+                </button>
+              )}
+
+              {/* 縣市按鈕群組 - 只在 showCityList 為 true 時顯示 */}
+              {showCityList && (
+                <div className="grid grid-cols-4 gap-2 mb-4">
+                  {cityGroups.map((city) => (
+                    <button
+                      key={city.name}
+                      onClick={() => handleCityClick(city.name)}
+                      className={`p-2 text-center rounded ${
+                        selectedCity === city.name
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      {city.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* 車站列表 */}
+              {filteredStations.length > 0 && (
+                <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto">
+                  {filteredStations.map((station) => (
+                    <button
+                      key={station.station_id}
+                      onClick={() => handleStationSelect({
+                        id: station.station_id,
+                        name: station.station_name
+                      })}
+                      className="p-2 text-center rounded hover:bg-gray-100"
+                    >
+                      {station.station_name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -180,19 +449,45 @@ export default function StationSearch() {
                 <th className="px-4 py-2 border">終點站</th>
                 <th className="px-4 py-2 border">出發時間</th>
                 <th className="px-4 py-2 border">抵達時間</th>
+                <th className="px-4 py-2 border">備註</th>
               </tr>
             </thead>
             <tbody>
-              {schedules.map((schedule, index) => (
-                <tr key={`${schedule.TrainNo}-${index}`} className="hover:bg-gray-50">
-                  <td className="px-4 py-2 border text-center">{schedule.TrainNo}</td>
-                  <td className="px-4 py-2 border text-center">{schedule.TrainTypeName.Zh_tw}</td>
-                  <td className="px-4 py-2 border text-center">{schedule.StartingStationName}</td>
-                  <td className="px-4 py-2 border text-center">{schedule.EndingStationName}</td>
-                  <td className="px-4 py-2 border text-center">{schedule.DepartureTime}</td>
-                  <td className="px-4 py-2 border text-center">{schedule.ArrivalTime}</td>
-                </tr>
-              ))}
+              {schedules.map((schedule, index) => {
+                const startStop = schedule.StopTimes.find(stop => stop.StationID === startStation)
+                const endStop = schedule.StopTimes.find(stop => stop.StationID === endStation)
+                
+                return (
+                  <tr key={`${schedule.TrainInfo.TrainNo}-${index}`} className="hover:bg-gray-50">
+                    <td className="px-4 py-2 border text-center">
+                      <button
+                        onClick={() => handleTrainClick(schedule.TrainInfo.TrainNo)}
+                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {schedule.TrainInfo.TrainNo}
+                      </button>
+                    </td>
+                    <td className="px-4 py-2 border text-center">
+                      {schedule.TrainInfo.TrainTypeName?.Zh_tw || '未知'}
+                    </td>
+                    <td className="px-4 py-2 border text-center w-28">
+                      {schedule.TrainInfo.StartingStationName.Zh_tw}
+                    </td>
+                    <td className="px-4 py-2 border text-center w-28">
+                      {schedule.TrainInfo.EndingStationName.Zh_tw}
+                    </td>
+                    <td className="px-4 py-2 border text-center">
+                      {startStop?.DepartureTime || '--:--'}
+                    </td>
+                    <td className="px-4 py-2 border text-center">
+                      {endStop?.ArrivalTime || '--:--'}
+                    </td>
+                    <td className="px-4 py-2 border text-center text-sm whitespace-pre-line">
+                      {schedule.TrainInfo.Note || ''}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
