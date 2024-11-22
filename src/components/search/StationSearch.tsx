@@ -44,16 +44,28 @@ interface CityGroup {
   stations: Station[];
 }
 
-export default function StationSearch() {
-  const [date, setDate] = useState<Date>(new Date())
+interface StationSearchProps {
+  initialState?: {
+    date?: Date
+    startStation?: string
+    endStation?: string
+    startStationInput?: string
+    endStationInput?: string
+    schedules?: any[]
+  }
+  onSearchResult?: (data: any) => void
+}
+
+export default function StationSearch({ initialState, onSearchResult }: StationSearchProps) {
+  const [date, setDate] = useState<Date>(initialState?.date || new Date())
   const [stations, setStations] = useState<Station[]>([])
-  const [startStationInput, setStartStationInput] = useState('')
-  const [endStationInput, setEndStationInput] = useState('')
-  const [startStation, setStartStation] = useState<string>('')
-  const [endStation, setEndStation] = useState<string>('')
+  const [startStationInput, setStartStationInput] = useState(initialState?.startStationInput || '')
+  const [endStationInput, setEndStationInput] = useState(initialState?.endStationInput || '')
+  const [startStation, setStartStation] = useState<string>(initialState?.startStation || '')
+  const [endStation, setEndStation] = useState<string>(initialState?.endStation || '')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [schedules, setSchedules] = useState<TrainSchedule[]>([])
+  const [schedules, setSchedules] = useState<TrainSchedule[]>(initialState?.schedules || [])
   const [isSearching, setIsSearching] = useState(false)
   const router = useRouter()
   const [selectedCity, setSelectedCity] = useState<string>('')
@@ -290,6 +302,18 @@ export default function StationSearch() {
     startStation,
     endStation
   })
+
+  // 在搜尋成功時更新父組件的狀態
+  useEffect(() => {
+    onSearchResult?.({
+      date,
+      startStation,
+      endStation,
+      startStationInput,
+      endStationInput,
+      schedules
+    })
+  }, [date, startStation, endStation, startStationInput, endStationInput, schedules])
 
   return (
     <div className="space-y-6 p-4">
