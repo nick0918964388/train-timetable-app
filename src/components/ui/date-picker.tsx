@@ -13,7 +13,7 @@ import {
 
 interface DatePickerProps {
   date?: Date
-  onChange?: (date: Date | undefined) => void
+  onChange?: (date: Date) => void
   placeholder?: string
   fromDate?: Date
   toDate?: Date
@@ -47,7 +47,7 @@ export function DatePicker({
         <Calendar
           mode="single"
           selected={date}
-          onSelect={onChange}
+          onSelect={onChange as (date: Date | undefined) => void}
           initialFocus
           fromDate={fromDate}
           toDate={toDate}

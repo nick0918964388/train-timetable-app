@@ -6,14 +6,23 @@ import { getStationNameMap } from '@/services/stationService'
 import TrainInfoDisplay from './TrainInfoDisplay'
 
 interface TrainNoSearchProps {
+  initialState?: {
+    trainNo?: string;
+    trainData?: any;
+  };
+  onSearchResult?: (data: any) => void;
   hasPreviousData?: boolean;
 }
 
-export default function TrainNoSearch({ hasPreviousData }: TrainNoSearchProps) {
-  const [trainNo, setTrainNo] = useState('')
+export default function TrainNoSearch({ 
+  initialState, 
+  onSearchResult,
+  hasPreviousData 
+}: TrainNoSearchProps) {
+  const [trainNo, setTrainNo] = useState(initialState?.trainNo || '')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [trainData, setTrainData] = useState<any>(null)
+  const [trainData, setTrainData] = useState<any>(initialState?.trainData || null)
   const [stationNames, setStationNames] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -22,25 +31,7 @@ export default function TrainNoSearch({ hasPreviousData }: TrainNoSearchProps) {
       setStationNames(nameMap)
     }
     loadStationNames()
-
-    // 檢查是否有之前的查詢結果
-    if (hasPreviousData) {
-      const previousData = localStorage.getItem('previousTrainData')
-      if (previousData) {
-        try {
-          const { trainData: savedTrainData, trainNo: savedTrainNo } = JSON.parse(previousData)
-          if (savedTrainData && savedTrainNo) {
-            setTrainData(savedTrainData)
-            setTrainNo(savedTrainNo)
-          }
-          // 清除 localStorage
-          localStorage.removeItem('previousTrainData')
-        } catch (error) {
-          console.error('Error parsing previousTrainData:', error)
-        }
-      }
-    }
-  }, [hasPreviousData])
+  }, [])
 
   // 處理搜尋按鈕點擊
   const handleSearch = async () => {
@@ -66,10 +57,18 @@ export default function TrainNoSearch({ hasPreviousData }: TrainNoSearchProps) {
       const liveData = await liveResponse.json();
 
       // 設置所有資料
-      setTrainData({
+      const newTrainData = {
         train: detailData.pageProps.train,
         live: liveData,
         stationNames
+      };
+      
+      setTrainData(newTrainData);
+      
+      // 通知父組件搜尋結果
+      onSearchResult?.({
+        trainNo,
+        trainData: newTrainData
       });
 
     } catch (error) {
@@ -81,49 +80,37 @@ export default function TrainNoSearch({ hasPreviousData }: TrainNoSearchProps) {
     }
   };
 
-  // 添加處理按鍵事件的函數
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !isLoading && trainNo) {
-      handleSearch()
-    }
-  }
-
   return (
-    <div className="space-y-6">
-      {/* 搜尋區塊 */}
-      <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
-        <div className="space-y-4">
-          <Input 
-            placeholder="請輸入車次" 
-            value={trainNo}
-            onChange={(e) => setTrainNo(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="text-center text-lg h-12"
-          />
-          
-          <Button 
-            className="w-full h-14 bg-blue-800 hover:bg-blue-900 text-white text-xl"
-            onClick={handleSearch}
-            disabled={isLoading || !trainNo}
-          >
-            {isLoading ? '查詢中...' : '查詢'}
-          </Button>
-
-          {error && (
-            <div className="text-red-500 text-base p-2 bg-red-50 rounded">
-              {error}
-            </div>
-          )}
-        </div>
+    <div className="p-4 space-y-6">
+      <div className="flex space-x-4">
+        <input
+          type="text"
+          value={trainNo}
+          onChange={(e) => setTrainNo(e.target.value)}
+          placeholder="請輸入車次號碼"
+          className="flex-1 h-12 px-4 border rounded-lg text-lg"
+        />
+        <Button
+          onClick={handleSearch}
+          disabled={isLoading || !trainNo}
+          className="h-12 px-8 bg-blue-600 hover:bg-blue-700 text-white text-lg"
+        >
+          {isLoading ? '查詢中...' : '查詢'}
+        </Button>
       </div>
 
-      {/* 顯示區塊 */}
+      {error && (
+        <div className="text-red-500 text-sm p-2 bg-red-50 rounded">
+          {error}
+        </div>
+      )}
+
       {trainData && (
-        <TrainInfoDisplay 
+        <TrainInfoDisplay
           trainData={trainData}
           trainNo={trainNo}
         />
       )}
     </div>
-  )
+  );
 } 
