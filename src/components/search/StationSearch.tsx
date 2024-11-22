@@ -56,6 +56,11 @@ interface StationSearchProps {
   onSearchResult?: (data: any) => void
 }
 
+interface TimeRange {
+  start: string;
+  end: string;
+}
+
 export default function StationSearch({ initialState, onSearchResult }: StationSearchProps) {
   const [date, setDate] = useState<Date>(initialState?.date || new Date())
   const [stations, setStations] = useState<Station[]>([])
@@ -73,6 +78,10 @@ export default function StationSearch({ initialState, onSearchResult }: StationS
   const [showCitySelection, setShowCitySelection] = useState(false)
   const [activeInput, setActiveInput] = useState<'start' | 'end' | null>(null)
   const [showCityList, setShowCityList] = useState(true)
+  const [timeRange, setTimeRange] = useState<TimeRange>({
+    start: '',
+    end: ''
+  })
 
   useEffect(() => {
     async function loadStations() {
@@ -143,7 +152,51 @@ export default function StationSearch({ initialState, onSearchResult }: StationS
       if (!response.ok) throw new Error('查詢失敗');
       
       const data = await response.json();
-      setSchedules(data.TrainTimetables || []);
+      let filteredSchedules = data.TrainTimetables || [];
+
+      // 如果有設定時間範圍，進行過濾
+      if (timeRange.start || timeRange.end) {
+        filteredSchedules = filteredSchedules.filter((schedule: any) => {
+          const startStop = schedule.StopTimes.find((stop: any) => stop.StationID === startStation);
+          if (!startStop) return false;
+
+          const departureTime = startStop.DepartureTime;
+          
+          const timeToNumber = (time: string) => 
+            parseInt(time.replace(':', ''));
+          
+          const departure = timeToNumber(departureTime);
+          
+          if (timeRange.start && timeRange.end) {
+            return departure >= timeToNumber(timeRange.start) && 
+                   departure <= timeToNumber(timeRange.end);
+          } else if (timeRange.start) {
+            return departure >= timeToNumber(timeRange.start);
+          } else if (timeRange.end) {
+            return departure <= timeToNumber(timeRange.end);
+          }
+          
+          return true;
+        });
+      }
+
+      // 根據出發時間排序
+      filteredSchedules.sort((a: any, b: any) => {
+        const aStartStop = a.StopTimes.find((stop: any) => stop.StationID === startStation);
+        const bStartStop = b.StopTimes.find((stop: any) => stop.StationID === startStation);
+        
+        if (!aStartStop || !bStartStop) return 0;
+        
+        const aTime = aStartStop.DepartureTime;
+        const bTime = bStartStop.DepartureTime;
+        
+        // 轉換時間為數字以便比較 (例如: "13:45" -> 1345)
+        const timeToNumber = (time: string) => parseInt(time.replace(':', ''));
+        
+        return timeToNumber(aTime) - timeToNumber(bTime);
+      });
+
+      setSchedules(filteredSchedules);
     } catch (error) {
       console.error('Search error:', error);
       setError(error instanceof Error ? error.message : '查詢失敗，請稍後再試');
@@ -329,6 +382,26 @@ export default function StationSearch({ initialState, onSearchResult }: StationS
               fromDate={yesterday}
               toDate={maxDate}
               className="h-12"
+            />
+          </div>
+        </div>
+
+        {/* 加入時間範圍選擇 */}
+        <div className="flex flex-col space-y-2">
+          <label className="text-sm font-medium">出發時間範圍</label>
+          <div className="flex items-center space-x-2">
+            <input
+              type="time"
+              value={timeRange.start}
+              onChange={(e) => setTimeRange(prev => ({ ...prev, start: e.target.value }))}
+              className="flex-1 h-10 px-3 border rounded-md"
+            />
+            <span className="text-gray-500">至</span>
+            <input
+              type="time"
+              value={timeRange.end}
+              onChange={(e) => setTimeRange(prev => ({ ...prev, end: e.target.value }))}
+              className="flex-1 h-10 px-3 border rounded-md"
             />
           </div>
         </div>
