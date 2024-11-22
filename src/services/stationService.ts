@@ -30,7 +30,7 @@ export async function fetchAllStations(): Promise<Station[]> {
       let city = ''
       if (station.address) {
         const cityMatches = station.address.match(
-          /(臺北市|新北市|基隆市|宜蘭縣|桃園市|新竹市|新竹縣|苗栗縣|台中市|彰化縣|南投縣|雲林縣|嘉義市|嘉義縣|台南市|高雄市|屏東縣|台東縣|花蓮縣)/
+          /(臺北市|新北市|基隆市|宜蘭縣|桃園市|新竹市|新竹縣|苗栗縣|臺中市|彰化縣|南投縣|雲林縣|嘉義市|嘉義縣|台南市|高雄市|屏東縣|台東縣|花蓮縣)/
         )
         if (cityMatches) {
           city = cityMatches[1]

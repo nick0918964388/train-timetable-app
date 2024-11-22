@@ -9,7 +9,7 @@ const nextConfig = {
         destination: 'https://tdx.transportdata.tw/api/basic/v3/:path*'
       },
       {
-        source: '/api/taiwanhelper/:path*', 
+        source: '/api/taiwanhelper/:path*',
         destination: 'https://taiwanhelper.com/:path*'
       }
     ]

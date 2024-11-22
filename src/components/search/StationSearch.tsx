@@ -61,6 +61,26 @@ interface TimeRange {
   end: string;
 }
 
+// 新增票價相關的介面定義
+interface PriceMap {
+  [key: string]: number;
+}
+
+interface PriceInfo {
+  pageProps: {
+    price: {
+      startStationId: string;
+      endStationId: string;
+      priceMap: Record<string, number>;
+      distance: number;
+    };
+    startStationId: string;
+    endStationId: string;
+    startStationName: string;
+    endStationName: string;
+  }
+}
+
 export default function StationSearch({ initialState, onSearchResult }: StationSearchProps) {
   const [date, setDate] = useState<Date>(initialState?.date || new Date())
   const [stations, setStations] = useState<Station[]>([])
@@ -82,6 +102,7 @@ export default function StationSearch({ initialState, onSearchResult }: StationS
     start: '',
     end: ''
   })
+  const [priceInfo, setPriceInfo] = useState<PriceInfo | null>(null);
 
   useEffect(() => {
     async function loadStations() {
@@ -259,10 +280,6 @@ export default function StationSearch({ initialState, onSearchResult }: StationS
     }
   }
 
-  const stationOptions = stations.map(station => ({
-    id: station.station_id,
-    name: station.station_name
-  }))
 
   // 修改處理按鍵事件的函數
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -286,7 +303,7 @@ export default function StationSearch({ initialState, onSearchResult }: StationS
       { name: '新竹市', stations: [] },
       { name: '新竹縣', stations: [] },
       { name: '苗栗縣', stations: [] },
-      { name: '台中市', stations: [] },
+      { name: '臺中市', stations: [] },
       { name: '彰化縣', stations: [] },
       { name: '南投縣', stations: [] },
       { name: '雲林縣', stations: [] },
@@ -317,7 +334,7 @@ export default function StationSearch({ initialState, onSearchResult }: StationS
     setSelectedCity(cityName)
     const cityStations = cityGroups.find(c => c.name === cityName)?.stations || []
     setFilteredStations(cityStations)
-    setShowCityList(false) // 新增這個 state 來控制縣市列表的顯示
+    setShowCityList(false) // 新這個 state 來控制縣市列表的顯示
   }
 
   // 修改處理車站輸入框點擊的函數
@@ -367,6 +384,83 @@ export default function StationSearch({ initialState, onSearchResult }: StationS
       schedules
     })
   }, [date, startStation, endStation, startStationInput, endStationInput, schedules])
+
+  // 新增票價查詢函數
+  const handlePriceSearch = async () => {
+    if (!startStation || !endStation) return;
+    
+    try {
+      setIsSearching(true);
+      setError(null);
+      
+      const response = await fetch(
+        `/api/taiwanhelper/_next/data/bsBsvlyiGDJiVhyivWDW6/railway/price/${startStation}/${endStation}.json?start=${startStation}&end=${endStation}`
+      );
+      
+      if (!response.ok) throw new Error('無法取得票價資料');
+      const data = await response.json();
+      setPriceInfo(data);
+    } catch (error) {
+      console.error('Price search error:', error);
+      setError(error instanceof Error ? error.message : '查詢票價失敗，請稍後再試');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // 修改 PriceTable 組件
+  const PriceTable = ({ priceInfo }: { priceInfo: PriceInfo }) => {
+    const trainTypes = [
+      { id: '3', name: '自強/太魯閣/普悠瑪' },
+      { id: '4', name: '莒光' },
+      { id: '6', name: '區間/區間快/復興' },
+      { id: '7', name: '普快' }
+    ];
+
+    const ticketTypes = [
+      { id: '1', name: '一般票' },
+      { id: '0', name: '電子票證' },
+      { id: '3', name: '優待票' }
+    ];
+
+    return (
+      <div className="mt-6">
+        <h3 className="text-lg font-medium mb-4">
+          票價資訊 ({priceInfo.pageProps.startStationName} → {priceInfo.pageProps.endStationName})
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 border">車種</th>
+                {ticketTypes.map(ticket => (
+                  <th key={ticket.id} className="px-4 py-2 border">{ticket.name}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {trainTypes.map(train => (
+                <tr key={train.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-2 border font-medium">{train.name}</td>
+                  {ticketTypes.map(ticket => {
+                    const price = priceInfo.pageProps.price.priceMap[`${ticket.id}_${train.id}`];
+                    return (
+                      <td key={ticket.id} className="px-4 py-2 border text-center">
+                        {price ? `$${price}` : '-'}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-2 text-sm text-gray-500">
+          總里程: {priceInfo.pageProps.price.distance} 公里
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6 p-4">
@@ -455,20 +549,18 @@ export default function StationSearch({ initialState, onSearchResult }: StationS
                     setFilteredStations(stations.filter(s => 
                       s.station_name.includes(searchText)
                     ))
-                    setSelectedCity('') // 清空選中的縣市
-                    setShowCityList(true) // 顯示縣市列表
+                    setShowCityList(false) // 有搜尋文字時隱藏縣市列表
                   } else {
                     setFilteredStations([]) // 清空篩選結果
-                    setShowCityList(true) // 顯示縣市列表
+                    setShowCityList(true) // 無搜尋文字時顯示縣市列表
                   }
                 }}
               />
 
-              {/* 如果有選擇縣市，顯示返回按鈕 */}
-              {selectedCity && !showCityList && (
+              {/* 如果有搜尋結果，顯示返回按鈕 */}
+              {filteredStations.length > 0 && !showCityList && (
                 <button
                   onClick={() => {
-                    setSelectedCity('')
                     setFilteredStations([])
                     setShowCityList(true)
                   }}
@@ -479,8 +571,8 @@ export default function StationSearch({ initialState, onSearchResult }: StationS
                 </button>
               )}
 
-              {/* 縣市按鈕群組 - 只在 showCityList 為 true 時顯示 */}
-              {showCityList && (
+              {/* 縣市按鈕群組 - 只在 showCityList 為 true 且沒有搜尋結果時顯示 */}
+              {showCityList && filteredStations.length === 0 && (
                 <div className="grid grid-cols-4 gap-2 mb-4">
                   {cityGroups.map((city) => (
                     <button
@@ -526,13 +618,23 @@ export default function StationSearch({ initialState, onSearchResult }: StationS
         </div>
       )}
 
-      <Button 
-        className="w-full h-12 bg-blue-800 hover:bg-blue-900 text-white text-lg"
-        onClick={handleSearch}
-        disabled={isLoading || isSearching || !date || !startStation || !endStation}
-      >
-        {isSearching ? '查詢中...' : '查詢'}
-      </Button>
+      <div className="flex space-x-4">
+        <Button 
+          className="flex-1 h-12 bg-blue-800 hover:bg-blue-900 text-white text-lg"
+          onClick={handleSearch}
+          disabled={isLoading || isSearching || !date || !startStation || !endStation}
+        >
+          {isSearching ? '查詢中...' : '查詢時刻表'}
+        </Button>
+        
+        <Button 
+          className="flex-1 h-12 bg-green-700 hover:bg-green-800 text-white text-lg"
+          onClick={handlePriceSearch}
+          disabled={isLoading || isSearching || !startStation || !endStation}
+        >
+          查詢票價
+        </Button>
+      </div>
 
       {/* 查詢結果 */}
       {schedules.length > 0 && (
@@ -589,6 +691,9 @@ export default function StationSearch({ initialState, onSearchResult }: StationS
           </table>
         </div>
       )}
+
+      {/* 在時刻表下方顯示票價資訊 */}
+      {priceInfo && <PriceTable priceInfo={priceInfo} />}
     </div>
   )
 } 
