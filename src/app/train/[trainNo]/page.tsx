@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import TrainInfoDisplay from '@/components/search/TrainInfoDisplay'
-import { Button } from '@/components/ui/button'
+import { ChevronLeft } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 import { getStationNameMap } from '@/services/stationService'
 
 export default function TrainDetailPage() {
@@ -41,14 +42,12 @@ export default function TrainDetailPage() {
         if (!liveResponse.ok) throw new Error('無法取得列車狀態')
         const liveData = await liveResponse.json()
 
-        // 設置所有資料，確保包含站名對照表
         setTrainData({
           train: {
             ...detailData.pageProps.train,
-            // 如果需要轉換其他站名，可以在這裡加入
           },
           live: liveData,
-          stationNames // 加入站名對照表
+          stationNames
         })
 
       } catch (err) {
@@ -62,46 +61,105 @@ export default function TrainDetailPage() {
     loadData()
   }, [params.trainNo])
 
-  if (isLoading) {
-    return <div className="p-4">載入中...</div>
-  }
-
-  if (error) {
-    return <div className="p-4 text-red-500">{error}</div>
-  }
-
-  if (!trainData) {
-    return <div className="p-4">找不到列車資料</div>
-  }
-
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="container mx-auto p-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">
+    <div className="min-h-screen bg-white">
+      <div className="container mx-auto">
+        <div className="relative h-14 flex items-center justify-center border-b bg-white shadow-sm">
+          <Link 
+            href="/"
+            className="absolute left-4 flex items-center text-blue-500 hover:text-blue-600 transition-colors"
+            onClick={() => {
+              const previousSearch = localStorage.getItem('previousStationSearch')
+              if (previousSearch) {
+                localStorage.setItem('restoreStationSearch', previousSearch)
+                localStorage.removeItem('previousTrainData')
+              }
+            }}
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span className="text-base">返回</span>
+          </Link>
+          
+          <h1 className="text-lg font-medium">
             {params.trainNo} 次列車時刻表
           </h1>
-          <Link href="/">
-            <Button 
-              variant="outline"
-              onClick={() => {
-                const previousSearch = localStorage.getItem('previousStationSearch')
-                if (previousSearch) {
-                  localStorage.setItem('restoreStationSearch', previousSearch)
-                  localStorage.removeItem('previousTrainData')
-                }
-              }}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              返回查詢
-            </Button>
-          </Link>
         </div>
 
-        <TrainInfoDisplay 
-          trainData={trainData}
-          trainNo={params.trainNo as string}
-        />
+        <div className="p-4">
+          {isLoading ? (
+            // 載入中的骨架屏幕
+            <div className="min-h-screen bg-gray-100">
+              <div className="container mx-auto">
+                {/* 標題列骨架屏幕 */}
+                <div className="relative h-14 flex items-center justify-center border-b bg-white/80 backdrop-blur-sm shadow-sm">
+                  <div className="absolute left-4 flex items-center text-blue-500">
+                    <ChevronLeft className="w-5 h-5" />
+                    <span className="text-base">返回</span>
+                  </div>
+                  <Skeleton className="h-6 w-48" />
+                </div>
+
+                <div className="p-4 space-y-4">
+                  {/* 基本資訊骨架屏幕 */}
+                  <div className="bg-white rounded-lg p-6 shadow-sm">
+                    <div className="space-y-4">
+                      <Skeleton className="h-8 w-1/4" />
+                      <div className="space-y-3">
+                        {[...Array(6)].map((_, i) => (
+                          <div key={i} className="flex justify-between">
+                            <Skeleton className="h-6 w-1/4" />
+                            <Skeleton className="h-6 w-1/2" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 時刻表骨架屏幕 */}
+                  <div className="bg-white rounded-lg p-6 shadow-sm">
+                    <Skeleton className="h-8 w-1/4 mb-4" />
+                    <div className="space-y-2">
+                      {[...Array(8)].map((_, i) => (
+                        <div key={i} className="flex justify-between items-center">
+                          <Skeleton className="h-6 w-1/6" />
+                          <Skeleton className="h-6 w-1/6" />
+                          <Skeleton className="h-6 w-1/6" />
+                          <Skeleton className="h-6 w-1/6" />
+                          <Skeleton className="h-6 w-1/6" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 出車資訊骨架屏幕 */}
+                  <div className="bg-white rounded-lg p-6 shadow-sm">
+                    <Skeleton className="h-8 w-1/4 mb-4" />
+                    <div className="flex flex-wrap gap-2">
+                      {[...Array(6)].map((_, i) => (
+                        <Skeleton key={i} className="h-10 w-24" />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="bg-red-50 text-red-500 p-4 rounded-lg">
+                {error}
+              </div>
+            </div>
+          ) : !trainData ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-gray-500">找不到列車資料</div>
+            </div>
+          ) : (
+            <TrainInfoDisplay 
+              trainData={trainData}
+              trainNo={params.trainNo as string}
+            />
+          )}
+        </div>
       </div>
     </div>
   )

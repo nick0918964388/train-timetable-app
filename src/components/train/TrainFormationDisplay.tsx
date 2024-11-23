@@ -298,18 +298,23 @@ export default function TrainFormationDisplay({ trainNo }: { trainNo: string }) 
           onClick={handleBackdropClick}
         >
           <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden relative">
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-8rem)]">
-              {/* 標題和關閉按鈕 */}
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold">車輛 {selectedCar} 詳細資訊</h3>
-                <button 
-                  onClick={() => setSelectedCar(null)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
+            {/* 修改標題列樣式 */}
+            <div className="relative h-14 flex items-center justify-center border-b bg-gray-50/80 backdrop-blur-sm">
+              {/* 返回按鈕 */}
+              <button 
+                onClick={() => setSelectedCar(null)}
+                className="absolute left-4 flex items-center text-blue-500 hover:text-blue-600 transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+                <span className="text-base">返回</span>
+              </button>
+              
+              {/* 標題 */}
+              <h3 className="text-lg font-medium">車輛 {selectedCar} 詳細資訊</h3>
+            </div>
 
+            {/* 內容區域 */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-8rem)]">
               {/* 保養紀錄 */}
               <div className="mb-6">
                 <div className="flex items-center gap-2 font-medium text-lg mb-4">

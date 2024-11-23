@@ -3,7 +3,7 @@ import { useParams, useRouter } from 'next/navigation'
 import TitleBar from '@/components/layout/TitleBar'
 import StationInfoCard from '@/components/station/StationInfoCard'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ChevronLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 function StationPage() {
@@ -23,17 +23,19 @@ function StationPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       <TitleBar />
-      <main className="container mx-auto px-4 pt-8">
-        {hasPreviousData && (
-          <Button
+      {hasPreviousData && (
+        <div className="relative h-14 flex items-center justify-center border-b bg-white/80 backdrop-blur-sm shadow-sm">
+          <button
             onClick={handleBack}
-            variant="default"
-            className="mb-6 flex items-center space-x-3 text-lg bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 h-14 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+            className="absolute left-4 flex items-center text-blue-500 hover:text-blue-600 transition-colors"
           >
-            <ArrowLeft className="w-6 h-6" />
-            <span>返回查詢結果</span>
-          </Button>
-        )}
+            <ChevronLeft className="w-5 h-5" />
+            <span className="text-base">返回</span>
+          </button>
+          <h1 className="text-lg font-medium">車站資訊</h1>
+        </div>
+      )}
+      <main className="container mx-auto px-4 pt-8">
         <div className="flex justify-center">
           <StationInfoCard stationId={params.id as string} />
         </div>
