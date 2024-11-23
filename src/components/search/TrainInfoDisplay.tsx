@@ -6,6 +6,7 @@ import type { TrainBasicInfo, TrainTimeTableItem, LiveData } from '@/types/stati
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import TrainFormationDisplay from '@/components/train/TrainFormationDisplay'
 
 interface TrainInfoDisplayProps {
   trainData: {
@@ -342,6 +343,9 @@ export default function TrainInfoDisplay({ trainData, trainNo }: TrainInfoDispla
           </div>
         </Card>
       </div>
+
+      {/* 添加車輛編組資訊 */}
+      <TrainFormationDisplay trainNo={trainNo} />
     </div>
   );
 } 

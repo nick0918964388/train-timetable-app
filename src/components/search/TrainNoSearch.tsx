@@ -80,23 +80,35 @@ export default function TrainNoSearch({
     }
   };
 
+  // 添加處理按鍵事件的函數
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !isLoading && trainNo) {
+      handleSearch()
+    }
+  }
+
   return (
     <div className="p-4 space-y-6">
-      <div className="flex space-x-4">
-        <input
-          type="text"
-          value={trainNo}
-          onChange={(e) => setTrainNo(e.target.value)}
-          placeholder="請輸入車次號碼"
-          className="flex-1 h-12 px-4 border rounded-lg text-lg"
-        />
-        <Button
-          onClick={handleSearch}
-          disabled={isLoading || !trainNo}
-          className="h-12 px-8 bg-blue-600 hover:bg-blue-700 text-white text-lg"
-        >
-          {isLoading ? '查詢中...' : '查詢'}
-        </Button>
+      <div className="space-y-4">
+        <div>
+          <input
+            type="text"
+            value={trainNo}
+            onChange={(e) => setTrainNo(e.target.value)}
+            onKeyDown={handleKeyDown}  // 添加按鍵事件處理
+            placeholder="請輸入車次號碼"
+            className="w-full h-12 px-4 border rounded-lg text-lg"
+          />
+        </div>
+        <div>
+          <Button
+            onClick={handleSearch}
+            disabled={isLoading || !trainNo}
+            className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white text-lg"
+          >
+            {isLoading ? '查詢中...' : '查詢'}
+          </Button>
+        </div>
       </div>
 
       {error && (
