@@ -14,8 +14,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "台鐵出車查詢系統",
-  description: "台鐵出車查詢系統",
+  title: "車輛編組運用查詢",
+  description: "車輛編組運用查詢",
 };
 
 export default function RootLayout({

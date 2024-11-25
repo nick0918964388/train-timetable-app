@@ -13,7 +13,7 @@ export default function TitleBar() {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             <Database className="h-6 w-6 text-blue-500" />
-            <span className="ml-2 text-lg font-medium">台鐵時刻查詢系統</span>
+            <span className="ml-2 text-lg font-medium">車輛編組運用查詢</span>
           </div>
           
           {/* 匯入功能按鈕 */}

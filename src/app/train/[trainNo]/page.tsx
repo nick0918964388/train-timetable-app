@@ -131,7 +131,7 @@ export default function TrainDetailPage() {
                     </div>
                   </div>
 
-                  {/* 出車資訊骨架屏幕 */}
+                  {/* 新MMIS出車資訊骨架屏幕 */}
                   <div className="bg-white rounded-lg p-6 shadow-sm">
                     <Skeleton className="h-8 w-1/4 mb-4" />
                     <div className="flex flex-wrap gap-2">

@@ -94,7 +94,7 @@ export default function SearchCard() {
     <Card className="w-[95%] max-w-[1200px] shadow-lg bg-white">
       <div className="flex items-center justify-center p-4 border-b">
         <Search className="w-5 h-5 mr-2" />
-        <h1 className="text-lg font-medium">台鐵火車時刻表查詢</h1>
+        <h1 className="text-lg font-medium">編組運用查詢</h1>
       </div>
 
       <div className="flex border-b">

@@ -222,7 +222,8 @@ export default function TrainInfoDisplay({ trainData, trainNo }: TrainInfoDispla
           </div>
         </div>
       )}
-
+      {/* 添加車輛編組資訊 */}
+      <TrainFormationDisplay trainNo={trainNo} />
       {/* 基本資訊和時刻表 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 基本資訊 */}
@@ -344,8 +345,7 @@ export default function TrainInfoDisplay({ trainData, trainNo }: TrainInfoDispla
         </Card>
       </div>
 
-      {/* 添加車輛編組資訊 */}
-      <TrainFormationDisplay trainNo={trainNo} />
+      
     </div>
   );
 } 
