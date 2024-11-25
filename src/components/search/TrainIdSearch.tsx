@@ -27,6 +27,11 @@ interface TrainOperation {
   endTime: string;
 }
 
+// 新增常見車號範例
+const EXAMPLE_TRAIN_IDS = [
+  { id: 'EMU3160', description: '(太魯閣號)' },
+]
+
 export default function TrainIdSearch({ 
   initialState, 
   onSearchResult 
@@ -63,39 +68,48 @@ export default function TrainIdSearch({
     }
   }, [])
 
-  // 處理搜尋按鈕點擊
-  const handleSearch = async () => {
-    if (!trainId) return;
+  // 新增處理範例點擊的函數
+  const handleExampleClick = (trainId: string) => {
+    setTrainId(trainId)
+    // 自動執行搜尋
+    handleSearch(trainId)
+  }
+
+  // 修改 handleSearch 函數以接受可選的 trainId 參數
+  const handleSearch = async (searchTrainId?: string) => {
+    const idToSearch = searchTrainId || trainId
+    if (!idToSearch) return
     
     try {
-      setIsLoading(true);
-      setError(null);
+      setIsLoading(true)
+      setError(null)
       
-      // 修改 SQL 查詢，使用正確的 join 條件
+      // 修改 SQL 查詢，加入 train_cars 的條件
       const { data: formationData, error: formationError } = await supabase
         .from('train_formations')
         .select(`
           id,
           transdate,
           trainno,
-          train_cars!train_formation_id(
+          train_cars!inner (
             trainseq,
             assetnum
           )
         `)
-        .eq('train_cars.assetnum', trainId)
-        .order('transdate', { ascending: false });
+        .eq('train_cars.assetnum', idToSearch.toUpperCase()) // 加入車號條件，並轉為大寫
+        .order('transdate', { ascending: false })
 
-      if (formationError) throw formationError;
+      if (formationError) throw formationError
+      console.log('formationData:', formationData)
 
       // 整理出車紀錄，按日期分組
       const dailyOperations = formationData.reduce((acc: Record<string, string>, curr) => {
-        const date = format(new Date(curr.transdate), 'yyyy/MM/dd');
+        const date = format(new Date(curr.transdate), 'yyyy/MM/dd')
         if (!acc[date]) {
-          acc[date] = curr.trainno;
+          acc[date] = curr.trainno
         }
-        return acc;
-      }, {});
+        return acc
+      }, {})
 
       // 3. 獲取每個車次的詳細資訊
       const operationsWithDetails = await Promise.all(
@@ -103,8 +117,8 @@ export default function TrainIdSearch({
           try {
             const detailResponse = await fetch(
               `/api/taiwanhelper/_next/data/bsBsvlyiGDJiVhyivWDW6/railway/train/${trainNo}.json?id=${trainNo}`
-            );
-            const detailData = await detailResponse.json();
+            )
+            const detailData = await detailResponse.json()
             
             return {
               date,
@@ -113,57 +127,57 @@ export default function TrainIdSearch({
               endStation: detailData.pageProps.train.endingStationName,
               startTime: detailData.pageProps.train.startingTime,
               endTime: detailData.pageProps.train.endingTime
-            };
+            }
           } catch (error) {
-            console.error(`Error fetching details for train ${trainNo}:`, error);
-            return null;
+            console.error(`Error fetching details for train ${trainNo}:`, error)
+            return null
           }
         })
-      );
+      )
 
-      const validOperations = operationsWithDetails.filter((op): op is TrainOperation => op !== null);
-      setOperations(validOperations);
+      const validOperations = operationsWithDetails.filter((op): op is TrainOperation => op !== null)
+      setOperations(validOperations)
 
       // 4. 獲取最新一筆紀錄的即時位置
       if (validOperations.length > 0) {
-        const latestOperation = validOperations[0];
+        const latestOperation = validOperations[0]
         const liveResponse = await fetch(
           `/api/taiwanhelper/api/get-train-live?no=${latestOperation.trainNo}`
-        );
+        )
         
         if (liveResponse.ok) {
-          const liveData = await liveResponse.json();
+          const liveData = await liveResponse.json()
           // 檢查是否有下一站資訊
           const nextStationKey = Object.entries(liveData.stationLiveMap)
-            .find(([key, value]) => key.startsWith(`${latestOperation.trainNo}_`) && value === 0);
+            .find(([key, value]) => key.startsWith(`${latestOperation.trainNo}_`) && value === 0)
           
           if (nextStationKey) {
             // 從 key 中提取站點 ID 並轉換為站名
-            const stationId = nextStationKey[0].split('_')[1];
-            setCurrentLocation(stationNames[stationId] || latestOperation.endStation);
+            const stationId = nextStationKey[0].split('_')[1]
+            setCurrentLocation(stationNames[stationId] || latestOperation.endStation)
           } else {
             // 如果找不到下一站，使用終點站
-            setCurrentLocation(latestOperation.endStation);
+            setCurrentLocation(latestOperation.endStation)
           }
         }
       }
 
       // 通知父組件搜尋結果
       onSearchResult?.({
-        trainId,
+        trainId: idToSearch,
         operations: validOperations,
         currentLocation
-      });
+      })
 
     } catch (error) {
-      console.error('Search error:', error);
-      setError(error instanceof Error ? error.message : '查詢失敗，請稍後再試');
-      setOperations([]);
-      setCurrentLocation(null);
+      console.error('Search error:', error)
+      setError(error instanceof Error ? error.message : '查詢失敗，請稍後再試')
+      setOperations([])
+      setCurrentLocation(null)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   // 修改 handleTrainClick 函數
   const handleTrainClick = async (trainNo: string) => {
@@ -225,13 +239,29 @@ export default function TrainIdSearch({
             value={trainId}
             onChange={(e) => setTrainId(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !isLoading && trainId && handleSearch()}
-            placeholder="請輸入車號 (例如: E100)"
+            placeholder="請輸入車號 (例如: EMU3160)"
             className="w-full h-12 px-4 border rounded-lg text-lg"
           />
         </div>
+
+        {/* 範例車號 */}
+        <div className="flex flex-wrap gap-2">
+          {EXAMPLE_TRAIN_IDS.map((example) => (
+            <button
+              key={example.id}
+              onClick={() => handleExampleClick(example.id)}
+              className="px-3 py-1.5 text-sm bg-gray-50 hover:bg-gray-100 
+                         text-gray-700 rounded-full border border-gray-200 
+                         transition-colors duration-200"
+            >
+              {example.id} {example.description}
+            </button>
+          ))}
+        </div>
+
         <div>
           <Button
-            onClick={handleSearch}
+            onClick={() => handleSearch()}
             disabled={isLoading || !trainId}
             className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white text-lg"
           >
@@ -246,29 +276,37 @@ export default function TrainIdSearch({
         </div>
       )}
 
-      {currentLocation && (
+      {(currentLocation || operations.length > 0) && (
         <Card className="p-4">
           <div className="flex flex-col space-y-3">
             <div className="flex items-center space-x-2">
               <MapPin className="w-6 h-6 text-blue-500" />
               <span className="font-medium text-lg">車號 {trainId} 目前位置推測</span>
             </div>
-            <div className="text-center text-2xl font-medium text-blue-600">
-              {currentLocation}
-            </div>
-            <div className="text-sm text-gray-500 text-center">
-              依據列車 {operations[0]?.trainNo} 次運行資訊推測
-            </div>
+            {currentLocation ? (
+              <>
+                <div className="text-center text-2xl font-medium text-blue-600">
+                  {currentLocation}
+                </div>
+                <div className="text-sm text-gray-500 text-center">
+                  依據列車 {operations[0]?.trainNo} 次運行資訊推測
+                </div>
+              </>
+            ) : (
+              <div className="text-center text-gray-500">
+                查無目前位置資訊
+              </div>
+            )}
           </div>
         </Card>
       )}
 
-      {operations.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-500" />
-            出車紀錄
-          </h3>
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-blue-500" />
+          出車紀錄
+        </h3>
+        {operations.length > 0 ? (
           <div className="grid gap-4">
             {operations.map((op, index) => (
               <Card key={index} className="p-4">
@@ -292,8 +330,14 @@ export default function TrainIdSearch({
               </Card>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <Card className="p-6">
+            <div className="text-center text-gray-500">
+              查無出車紀錄
+            </div>
+          </Card>
+        )}
+      </div>
     </div>
   );
 } 
