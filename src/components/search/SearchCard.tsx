@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card'
 import { Search } from 'lucide-react'
 import StationSearch from './StationSearch'
 import TrainNoSearch from './TrainNoSearch'
+import TrainIdSearch from './TrainIdSearch'
 
 interface SearchState {
   station: {
@@ -18,13 +19,19 @@ interface SearchState {
     trainNo?: string
     trainData?: any
   }
+  trainId: {
+    trainId?: string
+    operations?: any[]
+    currentLocation?: string
+  }
 }
 
 export default function SearchCard() {
   const [activeTab, setActiveTab] = useState('station')
   const [searchState, setSearchState] = useState<SearchState>({
     station: {},
-    trainNo: {}
+    trainNo: {},
+    trainId: {}
   })
 
   useEffect(() => {
@@ -65,7 +72,7 @@ export default function SearchCard() {
   }, [])
 
   // 處理搜尋結果的更新
-  const handleSearchResult = (type: 'station' | 'trainNo', data: any) => {
+  const handleSearchResult = (type: 'station' | 'trainNo' | 'trainId', data: any) => {
     setSearchState(prev => ({
       ...prev,
       [type]: data
@@ -84,6 +91,11 @@ export default function SearchCard() {
       localStorage.setItem('previousStationSearch', JSON.stringify({
         ...searchState.station,
         activeTab: 'station'
+      }))
+    } else if (activeTab === 'trainId' && searchState.trainId.operations) {
+      localStorage.setItem('previousTrainIdSearch', JSON.stringify({
+        ...searchState.trainId,
+        activeTab: 'trainId'
       }))
     }
     
@@ -118,6 +130,16 @@ export default function SearchCard() {
         >
           依車次
         </button>
+        <button
+          className={`flex-1 py-2 text-center ${
+            activeTab === 'trainId'
+              ? 'text-blue-500 border-b-2 border-blue-500'
+              : 'text-gray-500'
+          }`}
+          onClick={() => handleTabChange('trainId')}
+        >
+          依車號
+        </button>
       </div>
 
       <div className="bg-white">
@@ -131,6 +153,12 @@ export default function SearchCard() {
           <TrainNoSearch 
             initialState={searchState.trainNo}
             onSearchResult={(data) => handleSearchResult('trainNo', data)}
+          />
+        )}
+        {activeTab === 'trainId' && (
+          <TrainIdSearch 
+            initialState={searchState.trainId}
+            onSearchResult={(data) => handleSearchResult('trainId', data)}
           />
         )}
       </div>

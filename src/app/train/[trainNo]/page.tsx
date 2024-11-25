@@ -69,9 +69,9 @@ export default function TrainDetailPage() {
             href="/"
             className="absolute left-4 flex items-center text-blue-500 hover:text-blue-600 transition-colors"
             onClick={() => {
-              const previousSearch = localStorage.getItem('previousStationSearch')
+              const previousSearch = localStorage.getItem('previousTrainIdSearch')
               if (previousSearch) {
-                localStorage.setItem('restoreStationSearch', previousSearch)
+                localStorage.setItem('restoreTrainIdSearch', previousSearch)
                 localStorage.removeItem('previousTrainData')
               }
             }}
